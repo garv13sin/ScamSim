@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NexusOS</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="/static/style.css" rel="stylesheet">
+
+</head>
+<body>
+
+<canvas id="bgc"></canvas>
+<div class="scanlines"></div>
+<div class="vignette"></div>
+
+<div id="dicons">
+  <div class="dicon" ondblclick="openWin('wm')"><div class="dicon-img">💬</div><div class="dicon-lbl">MESSENGER</div></div>
+  <div class="dicon" ondblclick="openWin('wt')"><div class="dicon-img">🎯</div><div class="dicon-lbl">TARGET</div></div>
+  <div class="dicon" ondblclick="openWin('wn')"><div class="dicon-img">📡</div><div class="dicon-lbl">NET SCAN</div></div>
+  <div class="dicon" ondblclick="openWin('ws')"><div class="dicon-img">💻</div><div class="dicon-lbl">SYS INFO</div></div>
+</div>
+
+
+<div class="win" id="wnotes">
+  <div class="wtitle" id="title-wnotes">
+    <div class="wtitle-left"><span>📋</span><span class="wlabel">MESSAGES<span class="blk">_</span></span></div>
+    <div class="wcs"><div class="wc wc-x" onclick="closeWin('wnotes')"></div><div class="wc wc-n" onclick="closeWin('wnotes')"></div><div class="wc wc-m" onclick="maxWin('wnotes')"></div></div>
+  </div>
+  <div class="notes-body" id="notesBody">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="notes-content">
+          {% for category, message in messages %}
+            <div class="flash-msg flash-{{ category }}">
+              <span class="flash-icon">
+                {% if category == 'error' %}⚠{% elif category == 'success' %}✔{% elif category == 'warning' %}⚡{% else %}ℹ{% endif %}
+              </span>
+              <span class="flash-text">{{ message }}</span>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="notes-empty">No messages.</div>
+      {% endif %}
+    {% endwith %}
+  </div>
+  <div class="wgrip" id="grip-wnotes"></div>
+</div>
+
+
+
+<div class="win" id="wm">
+  <div class="wtitle" id="title-wm">
+    <div class="wtitle-left"><span>💬</span><span class="wlabel">MESSENGER<span class="blk">_</span></span></div>
+    <div class="wcs"><div class="wc wc-x" onclick="closeWin('wm')"></div><div class="wc wc-n" onclick="closeWin('wm')"></div><div class="wc wc-m" onclick="maxWin('wm')"></div></div>
+  </div>
+  <div class="msg-inner">
+    <div class="cpanel">
+      <div class="cphdr">CONTACTS <span class="cpcnt" id="cpcnt">0</span></div>
+      <div class="cplist" id="contactList">
+        {% for contact in contacts %}
+        <div class="ci {% if loop.first %}active{% endif %}"
+             onclick="selContact(this,'{{ contact.name }}','{{ contact.avatar_class }}','{{ contact.initials }}','{{ contact.status }}')"
+             data-contact="{{ contact.name }}">
+          <div class="cav {{ contact.avatar_class }}">{{ contact.initials }}</div>
+          <div class="cinfo">
+            <div class="cname">{{ contact.name }}</div>
+            <div class="clast">{{ contact.last_message }}</div>
+          </div>
+          {% if contact.status == 'online' %}<div class="cdot"></div>{% endif %}
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    <div class="cpane">
+      <div class="chdr">
+        <div class="chdrl">
+          <div class="cav" id="chatAv"><img src="{{ active_contact.avatar }}" alt="avatar"></div>
+          <div>
+            <div class="chname" id="chatName">{{ active_contact.name }}</div>
+            <div class="chstat {% if active_contact.status != 'online' %}off{% endif %}" id="chatStat">{{ active_contact.status }}</div>
+          </div>
+        </div>
+        <div class="chdra">
+          <button class="chbtn" onclick="openWin('wt')" title="Target record">🎯</button>
+          <button class="chbtn" title="Search">⌕</button>
+        </div>
+      </div>
+      <div class="msgs" id="messages"></div>
+      <div class="ibar">
+        <button class="ibtn2">📎</button>
+        <textarea class="ifield" id="msgInput" placeholder="Type a message..." rows="1" onkeydown="handleKey(event)"></textarea>
+        <button class="sbtn" onclick="sendMsg()">SEND ➤</button>
+      </div>
+    </div>
+  </div>
+  <div class="wgrip" id="grip-wm"></div>
+</div>
+
+<div class="win" id="wt">
+  <div class="wtitle" id="title-wt">
+    <div class="wtitle-left"><span>🎯</span><span class="wlabel">TARGET_RECORD</span></div>
+    <div class="wcs"><div class="wc wc-x" onclick="closeWin('wt')"></div><div class="wc wc-n" onclick="closeWin('wt')"></div><div class="wc wc-m" onclick="maxWin('wt')"></div></div>
+  </div>
+  <div class="tbody" id="targetBody"></div>
+  <div class="wgrip" id="grip-wt"></div>
+</div>
+
+<div class="win" id="wn">
+  <div class="wtitle" id="title-wn">
+    <div class="wtitle-left"><span>📡</span><span class="wlabel">NET_SCAN</span></div>
+    <div class="wcs"><div class="wc wc-x" onclick="closeWin('wn')"></div><div class="wc wc-n" onclick="closeWin('wn')"></div><div class="wc wc-m" onclick="maxWin('wn')"></div></div>
+  </div>
+  <div class="nbody" id="netBody"></div>
+  <div class="wgrip" id="grip-wn"></div>
+</div>
+
+<div class="win" id="ws">
+  <div class="wtitle" id="title-ws">
+    <div class="wtitle-left"><span>💻</span><span class="wlabel">SYS_INFO</span></div>
+    <div class="wcs"><div class="wc wc-x" onclick="closeWin('ws')"></div><div class="wc wc-n" onclick="closeWin('ws')"></div><div class="wc wc-m" onclick="maxWin('ws')"></div></div>
+  </div>
+  <div class="sbody">
+    <div class="srow"><span class="sk">HOST</span><span class="sv g" id="sHost">--</span></div>
+    <div class="srow"><span class="sk">IP</span><span class="sv">192.168.1.1</span></div>
+    <div class="srow"><span class="sk">OS</span><span class="sv">NexusLinux 4.1</span></div>
+    <div class="srow"><span class="sk">CPU</span><span class="sv g" id="cpuV">-- %</span></div>
+    <div class="srow"><span class="sk">RAM</span><span class="sv g">2.1 / 8 GB</span></div>
+    <div class="srow"><span class="sk">FIREWALL</span><span class="sv r">DISABLED</span></div>
+    <div class="srow"><span class="sk">VPN</span><span class="sv g">ACTIVE</span></div>
+    <div class="srow"><span class="sk">TRACE</span><span class="sv g">0%</span></div>
+  </div>
+  <div class="wgrip" id="grip-ws"></div>
+</div>
+
+
+<div id="taskbar">
+  <div class="tb-left">
+    <span class="tb-logo">NEXUS//OS</span>
+    <div class="tb-apps">
+      <button class="tb-btn lit" onclick="openWin('wm')">💬 MESSENGER</button>
+      <button class="tb-btn" onclick="openWin('wt')">🎯 TARGET</button>
+      <button class="tb-btn" onclick="openWin('wn')">📡 NET SCAN</button>
+      <button class="tb-btn" onclick="openWin('ws')">💻 SYS INFO</button>
+    </div>
+  </div>
+  <div class="tb-right">
+    <div class="tb-dot"></div>
+    <span class="tb-stat">VPN <span style="color:var(--accent)">ON</span></span>
+    <span class="tb-stat">TRACE <span>0%</span></span>
+    <span id="tbclock">--:--:--</span>
+  </div>
+</div>
+
+<script>
+
+
+
+const contactMessages = {
+  {% for contact in contacts %}
+  "{{ contact.name }}": {
+    av: "{{ contact.avatar_class }}",
+    initials: "{{ contact.initials }}",
+    status: "{{ contact.status }}",
+    messages: [
+      {% set ns = namespace(msgs=[]) %}
+      {% for d in messages_ %}{% if contact.name in d %}{% set ns.msgs = d[contact.name] %}{% endif %}{% endfor %}
+      {% for msg in ns.msgs %}{% if msg.role != "system" %}{
+        type: "{{ 'in' if msg.role == 'assistant' else 'out' }}",
+        text: {{ msg.content | tojson }},
+        time: "{{ msg.time | default('') }}",
+        code: null
+      }{% if not loop.last %},{% endif %}{% endif %}{% endfor %}
+    ]
+  }{% if not loop.last %},{% endif %}
+  {% endfor %}
+};
+const contactInfo = {{ contact_info | tojson }};
+</script>
+
+<script>
+(function(){
+  const canvas = document.getElementById('bgc');
+  const ctx = canvas.getContext('2d');
+  let W, H;
+  const N = 60, DIST = 155;
+
+  function resize(){ W = canvas.width = window.innerWidth; H = canvas.height = window.innerHeight; }
+  window.addEventListener('resize', resize); resize();
+
+  const nodes = Array.from({length:N}, ()=>({
+    x: Math.random()*W, y: Math.random()*H,
+    vx:(Math.random()-.5)*.3, vy:(Math.random()-.5)*.3,
+    r: Math.random()*1.4+.5, p: Math.random()*Math.PI*2
+  }));
+
+  const packets = Array.from({length:10}, ()=>({ t:Math.random(), a:0, b:0 }));
+
+  function frame(){
+    ctx.clearRect(0,0,W,H);
+
+    ctx.strokeStyle='rgba(0,229,180,.022)'; ctx.lineWidth=1;
+    for(let x=0;x<W;x+=65){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
+    for(let y=0;y<H;y+=65){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+
+    nodes.forEach(n=>{
+      n.x+=n.vx; n.y+=n.vy; n.p+=.018;
+      if(n.x<0)n.x=W; if(n.x>W)n.x=0;
+      if(n.y<0)n.y=H; if(n.y>H)n.y=0;
+    });
+
+    for(let i=0;i<N;i++) for(let j=i+1;j<N;j++){
+      const dx=nodes[j].x-nodes[i].x, dy=nodes[j].y-nodes[i].y;
+      const d=Math.sqrt(dx*dx+dy*dy);
+      if(d<DIST){
+        const a=(1-d/DIST)*.16;
+        ctx.beginPath(); ctx.strokeStyle=`rgba(0,229,180,${a})`; ctx.lineWidth=.55;
+        ctx.moveTo(nodes[i].x,nodes[i].y); ctx.lineTo(nodes[j].x,nodes[j].y); ctx.stroke();
+      }
+    }
+
+    packets.forEach(p=>{
+      p.t+=.007;
+      if(p.t>=1){ p.t=0; p.a=Math.floor(Math.random()*N); do{p.b=Math.floor(Math.random()*N);}while(p.b===p.a); }
+      const na=nodes[p.a], nb=nodes[p.b];
+      const dx=nb.x-na.x, dy=nb.y-na.y, d=Math.sqrt(dx*dx+dy*dy);
+      if(d<DIST*1.6){
+        const px=na.x+dx*p.t, py=na.y+dy*p.t;
+        const g=ctx.createRadialGradient(px,py,0,px,py,5);
+        g.addColorStop(0,'rgba(0,229,180,.95)'); g.addColorStop(1,'rgba(0,229,180,0)');
+        ctx.beginPath(); ctx.fillStyle=g; ctx.arc(px,py,5,0,Math.PI*2); ctx.fill();
+      }
+    });
+
+    nodes.forEach(n=>{
+      const pulse=.5+.5*Math.sin(n.p);
+      ctx.beginPath(); ctx.arc(n.x,n.y,n.r+pulse*.7,0,Math.PI*2);
+      ctx.fillStyle=`rgba(0,229,180,${.35+pulse*.45})`; ctx.fill();
+      const g=ctx.createRadialGradient(n.x,n.y,0,n.x,n.y,9);
+      g.addColorStop(0,`rgba(0,229,180,${.07*pulse})`); g.addColorStop(1,'rgba(0,229,180,0)');
+      ctx.fillStyle=g; ctx.beginPath(); ctx.arc(n.x,n.y,9,0,Math.PI*2); ctx.fill();
+    });
+
+    ctx.font='10px Share Tech Mono'; ctx.fillStyle='rgba(0,229,180,.045)';
+    for(let i=0;i<5;i++){
+      const n=nodes[i*11];
+      ctx.fillText('0x'+Math.floor(n.x*n.y%65535).toString(16).toUpperCase().padStart(4,'0'),n.x,n.y-12);
+    }
+
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+
+function tick(){
+  const n=new Date();
+  document.getElementById('tbclock').textContent=[n.getHours(),n.getMinutes(),n.getSeconds()].map(v=>v.toString().padStart(2,'0')).join(':');
+}
+setInterval(tick,1000); tick();
+document.getElementById('sHost').textContent=location.hostname||'localhost';
+setInterval(()=>{ const e=document.getElementById('cpuV'); if(e)e.textContent=(Math.floor(Math.random()*8+3))+'%'; },3000);
+
+const ips=['192.168.1.2','192.168.1.4','192.168.1.7','192.168.1.9','192.168.1.11','10.0.0.3','10.0.0.8','172.16.0.2','172.16.0.5'];
+let ipi=0;
+function scanLine(){
+  if(ipi>=ips.length)return;
+  const d=document.createElement('div'); d.className='nline';
+  d.innerHTML=`<span class="nip">${ips[ipi]}</span><span class="nst">HOST_UP</span><span class="npg">${(Math.random()*28+4).toFixed(0)}ms</span>`;
+  document.getElementById('netBody').appendChild(d);
+  document.getElementById('netBody').scrollTop=9999;
+  ipi++; if(ipi<ips.length) setTimeout(scanLine,240);
+}
+setTimeout(scanLine,700);
+
+let zTop=200;
+const maxed={};
+
+function focusWin(id){
+  document.querySelectorAll('.win').forEach(w=>w.classList.remove('focused'));
+  const w=document.getElementById(id);
+  if(w){w.classList.add('focused');w.style.zIndex=++zTop;}
+}
+function openWin(id){
+  const w=document.getElementById(id);
+  if(!w)return;
+  w.style.display='flex'; focusWin(id);
+}
+function closeWin(id){
+  const w=document.getElementById(id); if(w)w.style.display='none';
+}
+function maxWin(id){
+  const w=document.getElementById(id); if(!w)return;
+  if(maxed[id]){
+    const s=maxed[id]; Object.assign(w.style,{top:s.top,left:s.left,width:s.width,height:s.height}); delete maxed[id];
+  } else {
+    maxed[id]={top:w.style.top,left:w.style.left,width:w.style.width,height:w.style.height};
+    Object.assign(w.style,{top:'0',left:'0',width:'100vw',height:'calc(100vh - 36px)'});
+  }
+}
+
+function draggable(winId, titleId){
+  const win=document.getElementById(winId), tbar=document.getElementById(titleId);
+  if(!win||!tbar)return;
+  let dx,dy,on=false;
+  tbar.addEventListener('mousedown',e=>{
+    if(e.target.classList.contains('wc'))return;
+    on=true; dx=e.clientX-win.offsetLeft; dy=e.clientY-win.offsetTop;
+    focusWin(winId); e.preventDefault();
+  });
+  document.addEventListener('mousemove',e=>{if(!on)return;win.style.left=Math.max(0,e.clientX-dx)+'px';win.style.top=Math.max(0,Math.min(e.clientY-dy,innerHeight-80))+'px';});
+  document.addEventListener('mouseup',()=>on=false);
+}
+function resizable(winId, gripId){
+  const win=document.getElementById(winId), grip=document.getElementById(gripId);
+  if(!win||!grip)return;
+  let on=false,sx,sy,sw,sh;
+  grip.addEventListener('mousedown',e=>{on=true;sx=e.clientX;sy=e.clientY;sw=win.offsetWidth;sh=win.offsetHeight;focusWin(winId);e.preventDefault();e.stopPropagation();});
+  document.addEventListener('mousemove',e=>{if(!on)return;win.style.width=Math.max(320,sw+e.clientX-sx)+'px';win.style.height=Math.max(200,sh+e.clientY-sy)+'px';});
+  document.addEventListener('mouseup',()=>on=false);
+}
+
+['wm','wt','wn','ws','wnotes'].forEach(id=>{
+  draggable(id,'title-'+id);
+  resizable(id,'grip-'+id);
+  document.getElementById(id).addEventListener('mousedown',(e)=>{
+    focusWin(id);
+    // Don't prevent default on inputs/textareas so they stay focusable
+  });
+});
+
+const contacts={};
+if(typeof contactMessages!=='undefined'){
+  Object.entries(contactMessages).forEach(([name,data])=>{
+    contacts[name]={av:data.av,initials:data.initials,status:data.status,messages:data.messages||[]};
+  });
+}
+document.getElementById('cpcnt').textContent=Object.keys(contacts).length;
+let activeContact=Object.keys(contacts)[0]||'';
+
+function getTime(){const n=new Date();return[n.getHours(),n.getMinutes()].map(v=>v.toString().padStart(2,'0')).join(':');}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+function renderTarget(name){
+  const body=document.getElementById('targetBody');
+  const info=(typeof contactInfo!=='undefined'&&contactInfo[name])?contactInfo[name]:null;
+  if(!info){body.innerHTML=`<div style="color:var(--text-muted);font-size:11px;padding:12px;">No record found.</div>`;return;}
+  const av=contacts[name]?contacts[name].av:'av-teal';
+  const ini=(info.name||name)[0].toUpperCase();
+  body.innerHTML=`
+    <div class="slbl">IDENTITY</div>
+    <div class="tprow">
+      <div class="tav"><img src="${esc(info.avatar || '')}" alt="avatar"></div>
+      <div><div class="tnm">${esc(info.name||name)}</div><span class="tbadge">${esc(info.badge||'UNKNOWN')}</span><div class="tid">${esc(info.id||'#00000')}</div></div>
+    </div>
+    <div class="slbl">PROFILE</div>
+    <div class="fgrid">
+      ${info.age?`<div class="frow"><span class="fk">AGE</span><span class="fv">${esc(info.age)}</span></div>`:''}
+      ${info.gender?`<div class="frow"><span class="fk">GENDER</span><span class="fv">${esc(info.gender)}</span></div>`:''}
+      ${info.phone?`<div class="frow"><span class="fk">PHONE</span><span class="fv nc">${esc(info.phone)}</span></div>`:''}
+      ${info.email?`<div class="frow"><span class="fk">EMAIL</span><span class="fv nc">${esc(info.email)}</span></div>`:''}
+    </div>
+    ${info.records&&info.records.length?`<div class="slbl">RECORDS</div>${info.records.map(r=>`<div class="rtile"><span class="rk">${esc(r.key)}</span><span class="rv">${esc(r.value)}</span></div>`).join('')}`:''}
+  `;
+}
+
+function selContact(el,name,av,initials,status){
+  document.querySelectorAll('.ci').forEach(c=>c.classList.remove('active'));
+  el.classList.add('active');
+  activeContact=name;
+  document.getElementById('chatName').textContent=name;
+  document.getElementById('chatStat').textContent=status;
+  document.getElementById('chatStat').className='chstat'+(status!=='online'?' off':'');
+  const ca=document.getElementById('chatAv'); ca.className='cav '+av; ca.textContent=initials;
+  renderMsgs(name); renderTarget(name);
+}
+
+function renderMsgs(name){
+  const c=document.getElementById('messages'), ct=contacts[name]; if(!ct)return;
+  c.innerHTML=`<div class="dsep">TODAY · ${getTime()}</div>`;
+  ct.messages.forEach(m=>appendBub(m,ct)); c.scrollTop=c.scrollHeight;
+}
+
+function appendBub(m,contact){
+  const c=document.getElementById('messages');
+  const avCls=m.type==='in'?contact.av:'av-teal';
+  const avIni=m.type==='in'?contact.initials:'ME';
+  const div=document.createElement('div'); div.className='brow '+m.type;
+  div.innerHTML=`${m.type==='in'?`<div class="bav2 ${avCls}">${avIni}</div>`:''}
+    <div class="bub">${m.text}<span class="bt">${m.time||getTime()}</span></div>
+    ${m.type==='out'?`<div class="bav2 ${avCls}">${avIni}</div>`:''}`;
+  c.appendChild(div); c.scrollTop=c.scrollHeight;
+}
+
+function showTyping(contact){
+  const c=document.getElementById('messages'), d=document.createElement('div');
+  d.className='brow in'; d.id='typ';
+  d.innerHTML=`<div class="bav2 ${contact.av}">${contact.initials}</div><div class="bub typdots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>`;
+  c.appendChild(d); c.scrollTop=c.scrollHeight;
+}
+function rmTyping(){const e=document.getElementById('typ');if(e)e.remove();}
+
+async function sendMsg(){
+  const inp=document.getElementById('msgInput');
+  const txt=inp.value.trim(); if(!txt)return;
+  const contact=contacts[activeContact]; if(!contact)return;
+
+  const out={type:'out',text:esc(txt),time:getTime()};
+  contact.messages.push(out); appendBub(out,contact);
+  const lel=document.querySelector(`[data-contact="${activeContact}"] .clast`);
+  if(lel)lel.textContent=txt;
+
+  inp.value=''; inp.style.height='34px'; inp.disabled=true;
+  showTyping(contact);
+
+  try{
+    const res=await fetch('/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contact:activeContact,message:txt})});
+    const data=await res.json(); rmTyping();
+    const inm={type:'in',text:esc(data.reply),time:getTime(),code:data.code||null};
+    contact.messages.push(inm); appendBub(inm,contact);
+    if(data.game_over){
+      const d=document.createElement('div'); d.className='gone';
+      d.textContent=data.game_over_message||'⚠ CONNECTION TERMINATED';
+      document.getElementById('messages').appendChild(d);
+      inp.disabled=true;
+      setTimeout(()=>location.reload(), 2000);
+      return;
+    }
+  }catch(e){
+    rmTyping();
+    const em={type:'in',text:'⚠ Connection lost.',time:getTime()};
+    contact.messages.push(em); appendBub(em,contact);
+  }finally{
+    inp.disabled = false;
+    inp.removeAttribute('disabled');
+    setTimeout(() => inp.focus(), 50);
+  }
+}
+
+function handleKey(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMsg();}}
+
+if(activeContact){renderMsgs(activeContact);renderTarget(activeContact);}
+focusWin('wm');
+
+
+  if (document.querySelectorAll('.flash-msg').length > 0) {
+    openWin('wnotes');
+  }
+</script>
+</body>
+</html>
