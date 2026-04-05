@@ -27,9 +27,6 @@ The goal of the game is to **understand real-world scamming techniques** and lea
 
 * Python,Flask
 
-## Auth
-*powered by easy-auth ( [easy-auth.dev](https://easy-auth.dev/) )
-
 ## LLM Integration
 
 * Groq API
